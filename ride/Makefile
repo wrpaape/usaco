@@ -1,5 +1,5 @@
 CC   = gcc -Wall -O2
-PROG = test
+PROG = ride
 
 all: $(PROG)
 

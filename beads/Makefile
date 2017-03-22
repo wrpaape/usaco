@@ -1,5 +1,5 @@
 CC   = gcc -Wall -O2
-PROG = test
+PROG = beads
 
 all: $(PROG)
 
