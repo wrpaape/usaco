@@ -13,14 +13,6 @@ TASK: beads
 #define MAX_BEADS 350
 
 
-/* typedefs, struct declarations
- * ────────────────────────────────────────────────────────────────────────── */
-/* struct Streak { */
-/* 	unsigned int length; */
-/* 	unsigned int start; */
-/* }; */
-
-
 /* global variables
  * ────────────────────────────────────────────────────────────────────────── */
 static inline void
@@ -34,8 +26,8 @@ read_input(unsigned int *const restrict count_beads,
 }
 
 static inline unsigned int
-scan_streaks(const unsigned int *const restrict streak_begin,
-	     const unsigned int *const restrict streak_end)
+scan_streaks(const unsigned int *const restrict streaks_begin,
+	     const unsigned int *const restrict streaks_end)
 {
 	const unsigned int *restrict streak;
 	unsigned int max_span;
@@ -51,7 +43,7 @@ scan_streaks(const unsigned int *const restrict streak_begin,
 
 /* observe 'span' window of streaks of the form:
  * | L_WHITE >= 0 | L_COLOR > 0 | M_WHITE >= 0 | R_COLOR > 0 | R_WHITE >= 0 | */
-	streak = streak_begin;
+	streak = streaks_begin;
 
 	l_white = *streak++;
 	l_color = *streak++;
@@ -66,6 +58,7 @@ scan_streaks(const unsigned int *const restrict streak_begin,
 	span      = l_white + first_color_white + r_color + r_white;
 	max_span  = span;
 
+
 	while (1) {
 		span -= (l_white + l_color); /* ditch trailing 2 streaks */
 
@@ -74,7 +67,7 @@ scan_streaks(const unsigned int *const restrict streak_begin,
 
 		span += r_color; /* append new color */
 
-		if (streak == streak_end)
+		if (streak == streaks_end)
 			break; /* will end on a color */
 
 		l_white = m_white;
@@ -82,6 +75,9 @@ scan_streaks(const unsigned int *const restrict streak_begin,
 		r_white = *streak++; /* advance whites */
 
 		span += r_white; /* append new white */
+
+		if (span > max_span)
+			max_span = span;
 	}
 
 	span += first_white; /* append white streak from beads_begin */
@@ -99,48 +95,177 @@ scan_streaks(const unsigned int *const restrict streak_begin,
 }
 
 static inline unsigned int
-solve(const unsigned int count_beads,
-      const char *const restrict beads_begin)
+scan_remainder_beads(unsigned int *const restrict streaks_begin,
+		     unsigned int *restrict streak,
+		     const unsigned int first_color_streak_length,
+		     const char *restrict white_streak_begin,
+		     const char *restrict bead,
+		     const char *const restrict first_white_streak_begin,
+		     unsigned int streak_color,
+		     const unsigned int count_beads)
 {
-	unsigned int streaks[(2 * MAX_BEADS) - 1];
-	unsigned int *restrict streak;
-	const char *restrict bead;      /* current bead */
-	const char *restrict beads_end; /* end of buffer */
-	const char *restrict first_white_streak_begin;
-	const char *restrict color_streak_begin;
-	const char *restrict white_streak_begin;
 	unsigned int color;
-	unsigned int streak_color;
+	const char *restrict color_streak_begin;
 
-	beads_end = beads_begin + count_beads;
-	bead	  = beads_begin;
+	/* bead points to start of second color streak */
+	*streak++ = first_color_streak_length;  /* 1st color */
+	*streak++ = (bead - white_streak_begin); /* 2nd white */
 
-	/* get first streak of white (length >= 0) spanning
-	 * (..., beads_end) + (beads_begin, ...) */
-	while (1) {
-		color = (unsigned int) *bead;
+	/* get second color streak (may not be 3 white streaks) */
+	color_streak_begin = bead;
+	do {
+		do {
+			if (++bead == first_white_streak_begin)
+				return count_beads; /* 2 color streaks */
+
+			color = (unsigned int) *bead;
+		} while (color == streak_color);
+
+		white_streak_begin = bead;
 
 		if (color != 'w')
 			break;
 
-		if (++bead == beads_end)
-			return count_beads; /* all white */
+		do {
+			color = (unsigned int) *++bead;
+		} while (color == 'w');
+	} while (color == streak_color);
+
+	/* bead points to start of third color streak */
+
+	/* get remaining color streaks */
+	while (1) {
+		*streak++ = (white_streak_begin - color_streak_begin); /* color */
+		*streak++ = (bead               - white_streak_begin); /* white */
+
+		streak_color	   = color;
+		color_streak_begin = bead;
+		do {
+			do {
+				if (++bead == first_white_streak_begin) {
+					/* final color streak traversed */
+					*streak++ = (bead - color_streak_begin);
+					return scan_streaks(streaks_begin,
+							    streak);
+				}
+
+				color = (unsigned int) *bead;
+			} while (color == streak_color);
+
+			white_streak_begin = bead;
+
+			if (color != 'w')
+				break;
+
+			do {
+				color = (unsigned int) *++bead;
+			} while (color == 'w');
+		} while (color == streak_color);
+	}
+}
+
+static inline unsigned int
+color_wrapping_streak(unsigned int *const restrict streaks_begin,
+		      const char *restrict first_white_streak_begin,
+		      const char *const restrict beads_begin,
+		      const char *const restrict beads_end,
+		      const char *restrict color_streak_begin,
+		      const char *restrict bead,
+		      unsigned int streak_color,
+		      const unsigned int count_beads)
+{
+	unsigned int *restrict streak;
+	const char *restrict white_streak_begin;
+	unsigned int color;
+	unsigned int first_color_streak_length;
+
+	/* wrapping streak_color!
+	 * find where color streak and first white streak begin
+	 * (transition to other color */
+	streak = streaks_begin;
+	while (1) {
+		do {
+			if (color_streak_begin == bead)
+				return count_beads; /* white + 1 color */
+
+			color = (unsigned int) *--color_streak_begin;
+		} while (color == streak_color);
+
+		if (color != 'w') {
+			first_white_streak_begin = ++color_streak_begin;
+			*streak++ = 0; /* first white streak is 0 length */
+			break;
+		}
+
+		first_white_streak_begin = color_streak_begin++;
+
+		do {
+			color = (unsigned int) *--first_white_streak_begin;
+		} while (color == 'w');
+
+
+		if (color != streak_color) {
+			/* first white streak is > 0 length */
+			++first_white_streak_begin;
+			*streak++ = (  color_streak_begin
+				     - first_white_streak_begin);
+			break;
+		}
+
+		color_streak_begin = first_white_streak_begin;
 	}
 
-	/* save start of color streak */
-	streak_color = color;
+	/* AT LEAST 2 BEAD COLORS */
 
-	/* get first half of first white streak */
-	first_white_streak_begin = beads_end;
+	/* find where wrapping color streak ends */
 	do {
-		color = (unsigned int) *--first_white_streak_begin;
-	} while (color == 'w');
+		do {
+			color = (unsigned int) *++bead;
+		} while (color == streak_color);
 
-	++first_white_streak_begin;
+		white_streak_begin = bead;
 
-	/* first streak is white */
+		if (color != 'w')
+			break; /* zero length white streak */
+
+		do {
+			color = (unsigned int) *++bead;
+		} while (color == 'w');
+	} while (color == streak_color);
+
+	first_color_streak_length = (beads_end          - color_streak_begin)
+		                  + (white_streak_begin - beads_begin);
+
+	return scan_remainder_beads(streaks_begin,
+				    streak,
+				    first_color_streak_length,
+				    white_streak_begin,
+				    bead,
+				    first_white_streak_begin,
+				    color,
+				    count_beads);
+}
+
+
+static inline unsigned int
+white_wrapping_streak(unsigned int *const restrict streaks_begin,
+		      const char *const restrict first_white_streak_begin,
+		      const char *const restrict beads_begin,
+		      const char *const restrict beads_end,
+		      const char *restrict bead,
+		      unsigned int streak_color,
+		      const unsigned int count_beads)
+{
+	unsigned int *restrict streak;
+	const char *restrict color_streak_begin;
+	const char *restrict white_streak_begin;
+	unsigned int color;
+	unsigned int first_color_streak_length;
+
+	/* set first streak as white, wrapping beads buffer */
+	streak    = streaks_begin;
 	*streak++ = (beads_end - first_white_streak_begin)
-		  + (bead - beads_begin);
+		  + (bead      - beads_begin);
 
 	/* get first color streak */
 	color_streak_begin = bead;
@@ -162,62 +287,75 @@ solve(const unsigned int count_beads,
 		} while (color == 'w');
 	} while (color == streak_color);
 
-	/* bead point to start of second color streak */
-	*streak++ = (white_streak_begin - color_streak_begin); /* color */
-	*streak++ = (bead - white_streak_begin);	       /* white */
+	first_color_streak_length = (white_streak_begin - color_streak_begin);
 
-	/* get second color streak (may not be 3 white streaks) */
-	streak_color	   = color;
-	color_streak_begin = bead;
-	do {
-		do {
-			if (++bead == first_white_streak_begin)
-				return count_beads; /* 2 color streaks */
+	return scan_remainder_beads(streaks_begin,
+				    streak,
+				    first_color_streak_length,
+				    white_streak_begin,
+				    bead,
+				    first_white_streak_begin,
+				    color,
+				    count_beads);
+}
 
-			color = (unsigned int) *bead;
-		} while (color == streak_color);
 
-		white_streak_begin = bead;
+
+static inline unsigned int
+solve(const unsigned int count_beads,
+      const char *const restrict beads_begin)
+{
+	unsigned int streaks[(2 * MAX_BEADS) - 1];
+	const char *restrict bead;      /* current bead */
+	const char *restrict beads_end; /* end of buffer */
+	const char *restrict first_white_streak_begin;
+	const char *restrict last_color_bead;
+	unsigned int color;
+	unsigned int streak_color;
+
+	beads_end = beads_begin + count_beads;
+	bead	  = beads_begin;
+
+	/* get first streak of white (length >= 0) wrapping
+	 * (..., beads_end) + (beads_begin, ...) */
+	while (1) {
+		color = (unsigned int) *bead;
 
 		if (color != 'w')
 			break;
 
-		do {
-			color = (unsigned int) *++bead;
-		} while (color == 'w');
-	} while (color == streak_color);
-
-	/* bead point to start of third color streak */
-
-	/* get remaining color streaks */
-	while (1) {
-		*streak++ = (white_streak_begin - color_streak_begin);
-		*streak++ = (bead - white_streak_begin);
-
-		streak_color	   = color;
-		color_streak_begin = bead;
-		do {
-			do {
-				if (++bead == first_white_streak_begin) {
-					/* final color streak traversed */
-					*streak++ = (bead - color_streak_begin);
-					return scan_streaks(&streaks[0],
-							    streak);
-				}
-
-				color = (unsigned int) *bead;
-			} while (color == streak_color);
-
-			white_streak_begin = bead;
-
-			if (color != 'w')
-				break;
-
-			do {
-				color = (unsigned int) *++bead;
-			} while (color == 'w');
-		} while (color == streak_color);
+		if (++bead == beads_end)
+			return count_beads; /* all white */
 	}
+
+	/* save start of color streak */
+	streak_color = color;
+
+	/* get first half of first white streak */
+	last_color_bead = beads_end;
+	do {
+		color = (unsigned int) *--last_color_bead;
+	} while (color == 'w');
+
+	first_white_streak_begin = last_color_bead + 1;
+
+	return (color == streak_color)
+	/* return (0) */
+	     ? color_wrapping_streak(&streaks[0],
+				     first_white_streak_begin,
+				     beads_begin,
+				     beads_end,
+				     last_color_bead,
+				     bead,
+				     streak_color,
+				     count_beads)
+	     : white_wrapping_streak(&streaks[0],
+				     first_white_streak_begin,
+				     beads_begin,
+				     beads_end,
+				     bead,
+				     streak_color,
+				     count_beads);
 }
 
 
