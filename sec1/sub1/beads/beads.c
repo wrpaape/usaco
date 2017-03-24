@@ -13,8 +13,6 @@ TASK: beads
 #define MAX_BEADS 350
 
 
-/* global variables
- * ────────────────────────────────────────────────────────────────────────── */
 static inline void
 read_input(unsigned int *const restrict count_beads,
 	   char *const restrict beads)
@@ -24,6 +22,16 @@ read_input(unsigned int *const restrict count_beads,
 	assert(fscanf(input, "%u\n%s", count_beads, beads) == 2);
 	assert(fclose(input) == 0);
 }
+
+static inline void
+write_solution(const unsigned int solution)
+{
+	FILE *output;
+	assert(output = fopen(PROG ".out", "w"));
+	assert(fprintf(output, "%u\n", solution) >= 0);
+	assert(fclose(output) == 0);
+}
+
 
 static inline unsigned int
 scan_streaks(const unsigned int *const restrict streaks_begin,
@@ -42,7 +50,17 @@ scan_streaks(const unsigned int *const restrict streaks_begin,
 	unsigned int r_white;
 
 /* observe 'span' window of streaks of the form:
- * | L_WHITE >= 0 | L_COLOR > 0 | M_WHITE >= 0 | R_COLOR > 0 | R_WHITE >= 0 | */
+ *
+ * | l_white | l_color | m_white | r_color | r_white |
+ *
+ * where
+ *
+ *	length(l_white) >= 0
+ *	length(l_color) >= 1
+ *	length(m_white) >= 0
+ *	length(r_color) >= 1
+ *	length(r_white) >= 0
+ */
 	streak = streaks_begin;
 
 	l_white = *streak++;
@@ -57,7 +75,6 @@ scan_streaks(const unsigned int *const restrict streaks_begin,
 
 	span      = l_white + first_color_white + r_color + r_white;
 	max_span  = span;
-
 
 	while (1) {
 		span -= (l_white + l_color); /* ditch trailing 2 streaks */
@@ -108,7 +125,7 @@ scan_remainder_beads(unsigned int *const restrict streaks_begin,
 	const char *restrict color_streak_begin;
 
 	/* bead points to start of second color streak */
-	*streak++ = first_color_streak_length;  /* 1st color */
+	*streak++ = first_color_streak_length;   /* 1st color */
 	*streak++ = (bead - white_streak_begin); /* 2nd white */
 
 	/* get second color streak (may not be 3 white streaks) */
@@ -340,7 +357,6 @@ solve(const unsigned int count_beads,
 	first_white_streak_begin = last_color_bead + 1;
 
 	return (color == streak_color)
-	/* return (0) */
 	     ? color_wrapping_streak(&streaks[0],
 				     first_white_streak_begin,
 				     beads_begin,
@@ -357,17 +373,6 @@ solve(const unsigned int count_beads,
 				     streak_color,
 				     count_beads);
 }
-
-
-static inline void
-write_solution(const unsigned int solution)
-{
-	FILE *output;
-	assert(output = fopen(PROG ".out", "w"));
-	assert(fprintf(output, "%u\n", solution) >= 0);
-	assert(fclose(output) == 0);
-}
-
 
 int
 main(void)
