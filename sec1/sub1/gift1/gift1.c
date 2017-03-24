@@ -40,6 +40,8 @@ open(OUTPUT_FILE,							\
 
 #define DIGIT_TO_ASCII(DIGIT) ((char) ((DIGIT) | 48u)) /* 0...9 → '0'...'9' */
 
+#define EMIT_INTEGER(PTR) strtol(PTR, (char **) &PTR, 10)
+
 
 /* typedefs, struct declarations
  * ────────────────────────────────────────────────────────────────────────── */
@@ -52,7 +54,7 @@ struct Key {
 struct MapNode {
 	struct Key key;
 	long total;
-	const struct MapNode *restrict next;
+	struct MapNode *restrict next;
 };
 
 /* global variables
@@ -67,9 +69,18 @@ static struct MapNode *restrict node_ptr = &nodes[0];
 
 /* helper functions
  * ────────────────────────────────────────────────────────────────────────── */
+const char *
+get_name_end(const char *restrict ptr)
+{
+	while (*ptr != '\n')
+		++ptr;
+
+	return ptr;
+}
+
 char *
 put_total(char *restrict buffer,
-	  const long total)
+	  long total)
 {
 	int tmp;
         char *restrict ptr;
@@ -137,7 +148,7 @@ static inline void
 make_entry(const char *const restrict name_begin,
 	   const char *const restrict name_end)
 {
-	const struct MapNode *restrict *restrict bucket;
+	struct MapNode *restrict *restrict bucket;
 	unsigned long hash;
 
 	hash = key_init(&node_ptr->key,
@@ -205,25 +216,55 @@ solve(void)
 	const char *restrict ptr;
 	const char *restrict name_begin;
 	long group_size;
+	long count_recipients;
+	long gift_tot;
+	long gift_div;
+	long gift_rem;
+	long *restrict giver_total;
+	long *restrict recipient_total;
 
 	/* read in entries */
-	ptr = input_begin;
-
-	group_size = strtol(ptr, &ptr, 10);
-
+	ptr        = input_begin;
+	group_size = EMIT_INTEGER(ptr);
 	do {
 		name_begin = ++ptr; /* skip newline */
-
-		while (*ptr != '\n')
-			++ptr;
-
+		ptr        = get_name_end(ptr);
 		make_entry(name_begin,
 			   ptr);
 	} while (--group_size > 0);
 
-	entries_end = ptr;
+	entries_end = (char *) ptr;
 
 	/* read in gifts */
+	while (++ptr < input_end) { /* skip newline */
+		/* retrieve pointer to giver's total */
+		name_begin  = ptr;
+		ptr         = get_name_end(ptr);
+		giver_total = get_total(name_begin,
+					ptr);
+
+		gift_tot         = EMIT_INTEGER(ptr);
+		count_recipients = EMIT_INTEGER(ptr);
+
+		/* avoid dividing by 0 */
+		if (count_recipients == 0) {
+			*giver_total += gift_tot; /* all to "giver" */
+			continue;
+		}
+
+		gift_div = gift_tot / count_recipients;
+		gift_rem = gift_tot % count_recipients;
+
+		*giver_total += (gift_rem - gift_tot); /* keep rem rest lost */
+
+		do {	/* give each recipient 'gift_div' */
+			name_begin        = ++ptr; /* skip newline */
+			ptr               = get_name_end(ptr);
+			recipient_total   = get_total(name_begin,
+						      ptr);
+			*recipient_total += gift_div;
+		} while (--count_recipients > 0);
+	}
 }
 
 static inline void
@@ -253,10 +294,10 @@ write_output(void)
 
 	assert(output_fd >= 0);
 
-	output_size = ptr - gifts_begin;
+	output_size = ptr - entries_end;
 
 	assert(write(output_fd,
-		     gifts_begin,
+		     entries_end,
 		     output_size) == (ssize_t) output_size);
 
 	assert(close(output_fd) == 0);
