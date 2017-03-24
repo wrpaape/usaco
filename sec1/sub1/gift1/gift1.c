@@ -14,7 +14,6 @@ TASK: gift1
 #include <string.h>     /* memcmp, memcpy */
 #include <assert.h>	/* assert */
 #include <stdlib.h>	/* malloc, free, strtol */
-#include <errno.h>
 
 
 /* macro constants
@@ -70,7 +69,7 @@ static struct MapNode *restrict node_ptr = &nodes[0];
 /* helper functions
  * ────────────────────────────────────────────────────────────────────────── */
 const char *
-get_name_end(const char *restrict ptr)
+get_newline(const char *restrict ptr)
 {
 	while (*ptr != '\n')
 		++ptr;
@@ -217,7 +216,7 @@ solve(void)
 	const char *restrict name_begin;
 	long group_size;
 	long count_recipients;
-	long gift_tot;
+	long gift_sum;
 	long gift_div;
 	long gift_rem;
 	long *restrict giver_total;
@@ -228,7 +227,7 @@ solve(void)
 	group_size = EMIT_INTEGER(ptr);
 	do {
 		name_begin = ++ptr; /* skip newline */
-		ptr        = get_name_end(ptr);
+		ptr        = get_newline(ptr);
 		make_entry(name_begin,
 			   ptr);
 	} while (--group_size > 0);
@@ -239,27 +238,27 @@ solve(void)
 	while (++ptr < input_end) { /* skip newline */
 		/* retrieve pointer to giver's total */
 		name_begin  = ptr;
-		ptr         = get_name_end(ptr);
+		ptr         = get_newline(ptr);
 		giver_total = get_total(name_begin,
 					ptr);
 
-		gift_tot         = EMIT_INTEGER(ptr);
+		gift_sum         = EMIT_INTEGER(ptr);
 		count_recipients = EMIT_INTEGER(ptr);
 
 		/* avoid dividing by 0 */
 		if (count_recipients == 0) {
-			*giver_total += gift_tot; /* all to "giver" */
+			*giver_total += gift_sum; /* all to "giver" */
 			continue;
 		}
 
-		gift_div = gift_tot / count_recipients;
-		gift_rem = gift_tot % count_recipients;
+		gift_div = gift_sum / count_recipients;
+		gift_rem = gift_sum % count_recipients;
 
-		*giver_total += (gift_rem - gift_tot); /* keep rem rest lost */
+		*giver_total += (gift_rem - gift_sum); /* keep rem rest lost */
 
 		do {	/* give each recipient 'gift_div' */
 			name_begin        = ++ptr; /* skip newline */
-			ptr               = get_name_end(ptr);
+			ptr               = get_newline(ptr);
 			recipient_total   = get_total(name_begin,
 						      ptr);
 			*recipient_total += gift_div;
