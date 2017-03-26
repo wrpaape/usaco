@@ -7,8 +7,7 @@ TASK: milk2
 /* external dependencies
  * ────────────────────────────────────────────────────────────────────────── */
 #include <stdio.h>  /* fdopen, fdclose, fscanf */
-#include <stdlib.h> /* qsort, mergesort */
-#include <stddef.h> /* offsetof */
+#include <stdlib.h> /* qsort */
 #include <assert.h> /* assert */
 
 
@@ -120,7 +119,7 @@ solve(void)
 			if (span > max_idle_span)
 				max_idle_span = span;
 
-			/* calculate accumulating milk span */
+			/* calculate accumulated milk span */
 			span = acc_end - acc_begin;
 
 			if (span > max_milk_span)
