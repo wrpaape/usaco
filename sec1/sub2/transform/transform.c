@@ -40,7 +40,6 @@ open(OUTPUT_FILE,							\
      O_CREAT | O_TRUNC | O_WRONLY,					\
      S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH)
 
-#define DIGIT_TO_ASCII(DIGIT) ((char) ((DIGIT) | 48u))
 #define ASCII_TO_DIGIT(ASCII) (((size_t) (ASCII)) & 15u)
 
 
@@ -151,7 +150,7 @@ match_rotate_180(void)
 	const char *restrict ptr2;
 
 	ptr2 = pattern2;
-	ptr1 = pattern2 - 2;
+	ptr1 = pattern2 - 2; /* bottom right corner of pattern1 */
 
 	while (1) {
 		if (*ptr1 != *ptr2)
