@@ -18,8 +18,6 @@ TASK: namenum
 #define OUTPUT_FILE	PROG ".out"
 #define DICT_FILE	"dict.txt"
 #define SN_MAX_LENGTH	12
-#define MIN_DIGIT	'2'
-#define NONE_OUTPUT	"NONE\n"
 
 
 int
@@ -30,13 +28,14 @@ main(void)
 	FILE *output;
 	size_t line_size;
 	size_t line_capacity;
-	ssize_t size;
+	ssize_t size_read;
+	size_t i;
 	size_t count_digits;
 	char *line;
-	static char line_buffer[SN_MAX_LENGTH + 2];
+	static size_t size_write;
 	static char serial_number[SN_MAX_LENGTH + 1];
-	static int token_map[UCHAR_MAX + 2];
-	static size_t i;
+	static char line_buffer[SN_MAX_LENGTH + 2];
+	static int token_map[UCHAR_MAX + 1];
 	static int found_solution;
 	int token;
 	int digit;
@@ -68,30 +67,28 @@ main(void)
 	line_capacity = sizeof(line_buffer);
 
 	while (1) {
-		size = getline(&line,
-			       &line_capacity,
-			       dict);;
+		size_read = getline(&line,
+				    &line_capacity,
+				    dict);
 
-		if (size < 0)
+		if (size_read < 0)
 			break;
 
-		if (size == line_size) {
+		if (size_read == line_size) {
 			i = 0;
 			while (1) {
 				digit = serial_number[i];
 				token = line[i];
 
-				if (digit != token_map[(unsigned int) token])
+				if (digit != token_map[(size_t) token])
 					break;
 
 				if (++i == count_digits) {
-					size = fwrite(line,
-						      sizeof(char),
-						      line_size,
-						      output);
-
-					assert(size == line_size);
-					found_solution = 1;
+					size_write = fwrite(line,
+							    sizeof(char),
+							    line_size,
+							    output);
+					assert(size_write == line_size);
 					break;
 				}
 			}
@@ -99,13 +96,13 @@ main(void)
 	}
 
 
-	if (!found_solution) {
-		size = fwrite("NONE\n",
-			      sizeof(char),
-			      sizeof("NONE"),
-			      output);
+	if (!size_write) {
+		size_write = fwrite("NONE\n",
+				    sizeof(char),
+				    sizeof("NONE"),
+				    output);
 
-		assert(size == sizeof("NONE"));
+		assert(size_write == sizeof("NONE"));
 	}
 
 	assert(fclose(output) == 0);
