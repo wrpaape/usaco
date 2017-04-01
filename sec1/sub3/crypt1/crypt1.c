@@ -99,6 +99,7 @@ perm_m2(const unsigned int m1)
 	unsigned int m2_a, m2_b, m2;
 	unsigned int p1, p2, prod;
 	bool valid_perms;
+	bool p1_valid;
 
 	valid_perms = false;
 
@@ -110,8 +111,10 @@ perm_m2(const unsigned int m1)
 		if (p1 > 999)
 			break;
 
-		if (!check_digits(p1))
-			continue;
+		p1_valid = check_digits(p1);
+
+		/* can't continue here if p1 not valid,
+		 * may skip opportunity to set valid_perms */
 
 		m2_a *= 10;
 
@@ -123,8 +126,8 @@ perm_m2(const unsigned int m1)
 			if (p2 > 999)
 				break;
 
-			if (!check_digits(p2))
-				continue;
+			/* check to see if prod is 4 digits
+			 * before checking to see if p1 is valid */
 
 			m2   = m2_a + m2_b;
 			prod = m2 * m1;
@@ -132,9 +135,15 @@ perm_m2(const unsigned int m1)
 			if (prod > 9999)
 				break;
 
+			/* perm_m2 did not overflow
+			 * p1, p2, or prod at least once
+			 * --> safe to visit next perm of m1 */
+
 			valid_perms = true;
 
-			if (check_digits(prod))
+			if (   p1_valid
+			    && check_digits(p2)
+			    && check_digits(prod))
 				++count_solutions;
 
 		} while (++j < digits_end);
