@@ -7,17 +7,18 @@ TASK: skidesign
 
 #include <stdio.h>
 #include <assert.h>
-#include <limits.h>
+#include <math.h>
 
-#define N_MAX    1000
-#define MAX_ELEV 100
+#define N_MAX		1000
+#define ELEV_MAX	100
+#define DIFF_MAX	17
 
 static int N;
 static int elevs[N_MAX];
 
-int
-check_total_cost(const int min_ib,
-		 const int max_ib)
+static inline int
+cost_of_window(const int min_ib,
+	       const int max_ib)
 {
 	int hill, diff, total_cost, elev;
 
@@ -39,43 +40,74 @@ check_total_cost(const int min_ib,
 	return total_cost;
 }
 
+static inline int
+scan_windows(const int mid_elev)
+{
+	int min_ib;
+	int max_ib;
+	int min_total_cost;
+	int total_cost;
 
-int
+	/* scan 2 windows below mid_elev
+	 * and  2 windows above mid_elev
+	 * to account for rounding errors */
+
+	min_ib = mid_elev - 10;
+	max_ib = min_ib + DIFF_MAX;
+
+	min_total_cost = cost_of_window(min_ib++, max_ib++);
+
+	total_cost = cost_of_window(min_ib++, max_ib++);
+	if (total_cost < min_total_cost)
+		min_total_cost = total_cost;
+
+	total_cost = cost_of_window(min_ib++, max_ib++);
+	if (total_cost < min_total_cost)
+		min_total_cost = total_cost;
+
+	total_cost = cost_of_window(min_ib, max_ib);
+	if (total_cost < min_total_cost)
+		min_total_cost = total_cost;
+
+	return min_total_cost;
+}
+
+static inline int
 solve(void)
 {
 	int hill;
-	int elev, min_elev, max_elev;
-	int min_ib, max_ib;
-	int min_total_cost, total_cost;
+	int tot_elev, mid_elev;
+	double avg_elev, tot_dev, avg_dev, diff, weight, weighted_avg_elev;
 
-	min_elev = MAX_ELEV;
-	max_elev = 0;
+	if (N < 2)
+		return 0;
+
+	tot_elev = 0;
+
+	for (hill = 0; hill < N; ++hill)
+		tot_elev += elevs[hill];
+
+	avg_elev = ((double) tot_elev) / ((double) N);
+
+	tot_dev = 0.0;
 
 	for (hill = 0; hill < N; ++hill) {
-		elev = elevs[hill];
+		diff   = (double) elevs[hill] - avg_elev;
+		weight = diff * diff;
 
-		if (elev < min_elev)
-			min_elev = elev;
-		else if (elev > max_elev)
-			max_elev = elev;
+		if (diff < 0.0)
+			weight = -weight;
+
+		tot_dev += weight;
 	}
 
-	min_total_cost = INT_MAX;
+	avg_dev = tot_dev / (double) (N * N);
 
-	min_ib = min_elev;
-	max_ib = min_elev + 17;
+	weighted_avg_elev = avg_elev + avg_dev;
 
-	do {
-		total_cost = check_total_cost(min_ib,
-					      max_ib);
+	mid_elev = (int) lround(weighted_avg_elev);
 
-		if (total_cost < min_total_cost)
-			min_total_cost = total_cost;
-
-		++min_ib;
-	} while (++max_ib < max_elev);
-
-	return min_total_cost;
+	return scan_windows(mid_elev);
 }
 
 int
