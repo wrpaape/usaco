@@ -10,7 +10,6 @@ TASK: skidesign
 #include <math.h>
 
 #define N_MAX		1000
-#define ELEV_MAX	100
 #define DIFF_MAX	17
 
 static int N;
@@ -22,6 +21,7 @@ cost_of_window(const int min_ib,
 {
 	int hill, diff, total_cost, elev;
 
+	/* calculate total cost for window [min_ib, max_ib] */
 	total_cost = 0;
 
 	for (hill = 0; hill < N; ++hill) {
@@ -48,8 +48,15 @@ scan_windows(const int mid_elev)
 	int min_total_cost;
 	int total_cost;
 
-	/* scan 2 windows below mid_elev
-	 * and  2 windows above mid_elev
+	/* mid_elev is set to the rounded weighted average elevation
+	 * scan 2 windows below mid_elev and 2 windows above mid_elev
+	 * i.e.
+	 *
+	 * [mid_elev - 10, mid_elev +  7]
+	 * [mid_elev -  9, mid_elev +  8]
+	 * [mid_elev -  8, mid_elev +  9]
+	 * [mid_elev -  7, mid_elev + 10]
+	 *
 	 * to account for rounding errors */
 
 	min_ib = mid_elev - 10;
@@ -77,22 +84,21 @@ solve(void)
 {
 	int hill;
 	int tot_elev, mid_elev;
-	double avg_elev, tot_dev, avg_dev, diff, weight, weighted_avg_elev;
+	double avg_elev, weighted_avg_elev;
+	double tot_dev, avg_dev, diff, weight, weighted_avg_elev;
 
-	if (N < 2)
-		return 0;
-
+	/* find average elevation */
 	tot_elev = 0;
-
 	for (hill = 0; hill < N; ++hill)
 		tot_elev += elevs[hill];
 
 	avg_elev = ((double) tot_elev) / ((double) N);
 
+	/* get signed sum of the squares of the differences from average elevation */
 	tot_dev = 0.0;
 
 	for (hill = 0; hill < N; ++hill) {
-		diff   = (double) elevs[hill] - avg_elev;
+		diff   = ((double) elevs[hill]) - avg_elev;
 		weight = diff * diff;
 
 		if (diff < 0.0)
@@ -101,12 +107,18 @@ solve(void)
 		tot_dev += weight;
 	}
 
+	/* divide sum of squares of the differences by N^2 to obtain
+	 * offset needed to apply to average elevation
+	 * s.t. total 'weight' above and below new elevation is equal */
 	avg_dev = tot_dev / (double) (N * N);
 
+	/* apply offset */
 	weighted_avg_elev = avg_elev + avg_dev;
 
+	/* round to nearest integer */
 	mid_elev = (int) lround(weighted_avg_elev);
 
+	/* evaluate 17-wide windows about mid_elev */
 	return scan_windows(mid_elev);
 }
 
