@@ -6,31 +6,20 @@ TASK: ariprog
 
 #include <stdio.h>
 #include <assert.h>
-#include <stdlib.h>
 #include <stdbool.h>
 
 #define N_MIN		3
 #define N_MAX		25
 #define M_MAX		250
-#define M_MAX_SQ	(M_MAX * M_MAX)
-#define BI_SQ_MAX_MAX	(2 * M_MAX_SQ)
+#define BI_SQ_MAX_MAX	(2 * M_MAX * M_MAX)
 
 
 int N, M;
 int bi_sq_max;
-int count_bi_sqs;
 
-bool is_bi_sq[BI_SQ_MAX_MAX + 1];
-int bi_sqs[M_MAX_SQ];
+bool bi_sq[BI_SQ_MAX_MAX + 1];
 
 FILE *output;
-
-int
-order_asc(const void *key1,
-	  const void *key2)
-{
-	return *((int *) key1) - *((int *) key2);
-}
 
 static inline void
 init_bisquares(void)
@@ -40,17 +29,12 @@ init_bisquares(void)
 	for (p = 0; p <= M; ++p) {
 		p_sq = p * p;
 		for (q = p; q <= M; ++q) {
-			q_sq		       = q * q;
-			bi_sq_max	       = p_sq + q_sq;
-			is_bi_sq[bi_sq_max]    = true;
-			bi_sqs[count_bi_sqs++] = bi_sq_max;
+			q_sq		 = q * q;
+			bi_sq_max	 = p_sq + q_sq;
+			bi_sq[bi_sq_max] = true;
 		}
 	}
 
-	qsort(&bi_sqs[0],
-	      count_bi_sqs,
-	      sizeof(bi_sqs[0]),
-	      &order_asc);
 }
 
 static inline bool
@@ -59,7 +43,6 @@ solve(void)
 	int a, b, num;
 	int a_max, b_max, n_max, b_n_max, num_max;
 	bool seq_found;
-	int *restrict bi_sq;
 
 	init_bisquares();
 
@@ -72,10 +55,10 @@ solve(void)
 		b_n_max = b * n_max;
 		a_max   = bi_sq_max - b_n_max;
 
-		for (bi_sq = &bi_sqs[0]; a = *bi_sq, a <= a_max; ++bi_sq) {
+		for (a = 0; a <= a_max; ++a) {
 			num_max = a + b_n_max;
 
-			for (num = a; is_bi_sq[num]; num += b)
+			for (num = a; bi_sq[num]; num += b)
 				if (num == num_max) {
 					assert(fprintf(output,
 						       "%d %d\n",
