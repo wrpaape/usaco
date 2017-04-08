@@ -9,12 +9,12 @@ TASK: numtri
 
 #define R_MAX	1000
 
-/* track max sum at for (row, col) at (col, row + 1) */
+/* track max sum for (row, col) at (col, row + 1) */
 static int tri[R_MAX][R_MAX + 1];
 
 int
-solve(const ssize_t row,
-      const ssize_t col)
+get_max_sum_at(const ssize_t row,
+	       const ssize_t col)
 {
 	int max_sum_above, sum_above, max_sum_at;
 	int *restrict max_sum_at_ptr;
@@ -31,8 +31,8 @@ solve(const ssize_t row,
 
 	row_above = row - 1; /* move up 1 row */
 
-	max_sum_above = solve(row_above, col - 1); /* up left */
-	sum_above     = solve(row_above, col);     /* up right */
+	max_sum_above = get_max_sum_at(row_above, col - 1); /* up left */
+	sum_above     = get_max_sum_at(row_above, col);     /* up right */
 	if (sum_above > max_sum_above)
 		max_sum_above = sum_above;
 
@@ -57,15 +57,15 @@ main(void)
 		do {
 			tri[row][col] = -1; /* sentinel for lookup */
 		} while (++col <= R);
-
 	}
 	assert(fclose(input) == 0);
 
 	last_row = R - 1;
 	max_sum  = -1;
 
+	/* find max for each column in last row */
 	for (col = 0; col < R; ++col) {
-		sum = solve(last_row, col);
+		sum = get_max_sum_at(last_row, col);
 		if (sum > max_sum)
 			max_sum = sum;
 	}
