@@ -31,6 +31,12 @@ main(void)
 	unsigned int swap_count;
 	unsigned int rem_out_of_place;
 
+	/* initial scan, get count of 1s and 2s
+	 *
+	 * split sequence into 3 ranges
+	 * 1: [ptr_1, ptr_2)   of length 'count_1'
+	 * 2: [ptr_2, ptr_3)   of length 'count_2'
+	 * 3: [ptr_3, ptr_end) of length 'N - count_1 - count_2' */
 	assert(input = fopen("sort3.in", "r"));
 	assert(fscanf(input, "%u\n", &N) == 1);
 
@@ -49,11 +55,10 @@ main(void)
 
 	assert(fclose(input) == 0);
 
-
 	ptr_2 = ptr_1 + count_1;
 	ptr_3 = ptr_2 + count_2;
 
-	/* out of place in 1 */
+	/* count out of place in range 1 (2s and 3s) */
 	count_2_in_1 = count_3_in_1 = 0;
 	for (ptr = ptr_1; ptr < ptr_2; ++ptr) {
 		val = *ptr;
@@ -62,7 +67,7 @@ main(void)
 	}
 	count_1_in_1 = count_1 - (count_2_in_1 + count_3_in_1);
 
-	/* out of place in 2 */
+	/* count out of place in range 2 (1s and 3s) */
 	count_1_in_2 = count_3_in_2 = 0;
 	while (ptr < ptr_3) {
 		val = *ptr++;
@@ -71,12 +76,12 @@ main(void)
 	}
 	count_2_in_2 = count_2 - (count_1_in_2 + count_3_in_2);
 
-	/* out of place in 3 */
+	/* count out of place in range 3 (1s and 2s) */
 	count_1_in_3 = count_1 - (count_1_in_1 + count_1_in_2);
 	count_2_in_3 = count_2 - (count_2_in_1 + count_2_in_2);
 
 
-	/* first make as many 1 -> 1 swaps as possible */
+	/* first make as many 1 swap -> 2 in place swaps as possible */
 
 	/* swap as many 1s in 3 with 3s in 1 as possible */
 	min_count         = MIN(count_1_in_3, count_3_in_1);
@@ -102,8 +107,7 @@ main(void)
 	rem_out_of_place += (count_2_in_3 + count_3_in_2);
 
 
-	/* remaining out of place:
-	 * 2 swaps -> puts 3 in place */
+	/* remaining out of place: 2 swaps -> puts 3 in place */
 	swap_count += ((rem_out_of_place * 2) / 3);
 
 
