@@ -30,8 +30,8 @@ read_input(void)
 static inline unsigned int
 belongs_in_set(const unsigned int x)
 {
-	for (unsigned int i = 0; i < count; ++i)
-		if (HAMMING_DISTANCE(x, solution[i]) < D)
+	for (unsigned int n = 0; n < count; ++n)
+		if (HAMMING_DISTANCE(x, solution[n]) < D)
 			return 0;
 
 	return 1;
