@@ -23,8 +23,25 @@ solve_combinations(const long long n_max,
 {
 	long long n_max_m1;
 
+	/* if target is less than or equal to n_max,
+	 * the number of combinations of sums totaling
+	 * 'target' that can be made from the set '1...n_max'
+	 * is equal to 1 (target by itself)
+	 * plus the number of combinations totaling 'target'
+	 * in the set '1...target - 1' */
+
 	if (n_max >= target) /* ignore range [target + 1, n_max] */
 		return 1 + count_combinations(target - 1, target);
+
+
+	/* if target is greater than n_max,
+	 * the number of combinations of sums totaling
+	 * 'target' that can be made from the set '1...n_max'
+	 * is equal to the number of combinations totaling
+	 * 'target - n_max' that can be made from '1...n_max - 1'
+	 * (just add n_max to each one of those to get 'target')
+	 * plus the number of combinations totaling 'target' itself
+	 * from '1...n_max - 1' */
 
 	n_max_m1 = n_max - 1;
 
@@ -43,6 +60,7 @@ count_combinations(const long long n_max,
 	cached_solution = *cache_ptr;
 
 	if (cached_solution < 0) {
+		/* not solved yet, solve and set cache */
 		cached_solution = solve_combinations(n_max, target);
 		*cache_ptr      = cached_solution;
 	}
@@ -50,6 +68,14 @@ count_combinations(const long long n_max,
 	return cached_solution;
 }
 
+/* to find the number of "even-split" partitions in the set '1...N':
+ *
+ *	1. count the number of combinations totaling 'sum(1...N) / 2'
+ *	   in the range '1...N'
+ *	2. divide this by 2 to get the total number of partitions
+ *	   as there will be 2 sets totaling 'sum(1...N) / 2' for
+ *	   every partition
+ */
 static inline long long
 solve(const long long sum_1_to_N_div_2,
       const long long N)
@@ -59,7 +85,7 @@ solve(const long long sum_1_to_N_div_2,
 		for (target = 1; target <= sum_1_to_N_div_2; ++target)
 			cache[n][target] = -1;
 
-	/* leave cache[0...N][0] and cache[0][0...target] == 0 */
+	/* leave cache[0...N][0] and cache[0][0...sum(1...N) / 2] == 0 */
 
 	return count_combinations(N, sum_1_to_N_div_2) / 2;
 }
