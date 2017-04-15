@@ -82,12 +82,10 @@ main(void)
 	for (i = 0; i < DIGIT_COUNT; ++i) {
 		count = total_counts[i];
 
-		if (count == 0)
-			break;
-
-		assert(fprintf(output, "%c %u\n",
-			       digit_display[i],
-			       count) > 0);
+		if (count > 0)
+			assert(fprintf(output, "%c %u\n",
+				       digit_display[i],
+				       count) > 0);
 	}
 	assert(fclose(output) == 0);
 }
