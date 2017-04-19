@@ -37,6 +37,7 @@ init_digits(unsigned long start)
 	unsigned long digit;
 	bool incremented;
 
+
 	incremented  = false;
 	digits_begin = digits_end - 1;
 
@@ -83,10 +84,8 @@ increment_digits(void)
 static inline bool
 is_runround(void)
 {
-	bool visited[MAX_LENGTH + 1]  = { false };
-	bool taken[MAX_LENGTH + 1] = { false };
-	bool *restrict is_visited;
-	bool *restrict is_taken;
+	bool visited[MAX_LENGTH + 1] = { false };
+	bool *restrict visit_ptr;
 	unsigned long i;
 	unsigned long count;
 	unsigned long digit;
@@ -95,20 +94,13 @@ is_runround(void)
 	count = 0;
 
 	do {
-		digit    = digits_begin[i];
-		is_taken = &taken[digit];
+		digit     = digits_begin[i];
+		visit_ptr = &visited[digit];
 
-		if (*is_taken)
+		if (*visit_ptr)
 			return false;
 
-		*is_taken = true;
-
-		is_visited = &visited[digit];
-
-		if (*is_visited)
-			return false;
-
-		*is_visited = true;
+		*visit_ptr = true;
 
 		i += digit;
 		i %= length;
