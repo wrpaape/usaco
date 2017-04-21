@@ -14,6 +14,11 @@ TASK: lamps
 #define COUNT_BUTTONS		4
 #define COUNT_SOLUTIONS_MAX	(1 << COUNT_BUTTONS)
 
+#define ODD_PATTERN							\
+(  (1 <<  0) | (1 <<  2) | (1 <<  4) | (1 <<  6)			\
+ | (1 <<  8) | (1 << 10) | (1 << 12) | (1 << 14))
+#define EVEN_PATTERN (~ODD_PATTERN)
+
 typedef unsigned long LampBlock;
 
 #define LAMP_BLOCK_MAX		ULONG_MAX
@@ -27,6 +32,7 @@ typedef LampBlock LampSet[LAMP_LENGTH(N_MAX)];
 
 static LampSet buttons[COUNT_BUTTONS];
 
+static LampSet candidate;
 static LampSet final_on;
 static LampSet final_off;
 static LampSet solutions_buffer[COUNT_SOLUTIONS_MAX];
@@ -36,7 +42,7 @@ static size_t count_solutions;
 static size_t N;
 static size_t lamp_length;
 static size_t lamp_size;
-static size_t max_switch_count;
+static unsigned int max_switch_count;
 static LampBlock last_max_bit;
 
 static inline int
@@ -110,7 +116,7 @@ order_lamp_sets_asc(const void *key1,
 }
 
 static inline void
-check_solution(const LampSet candidate)
+check_solution(void)
 {
 	size_t i;
 	LampBlock cand_block, on_block, off_block;
@@ -143,6 +149,17 @@ check_solution(const LampSet candidate)
 }
 
 static inline void
+toggle_button(const LampSet button)
+{
+	size_t i;
+
+	i = 0;
+	do {
+		candidate[i] ^= button[i];
+	} while (++i < lamp_length);
+}
+
+static inline void
 put_lamp(LampSet set,
 	 const unsigned int lamp)
 {
@@ -154,17 +171,20 @@ put_lamp(LampSet set,
 	set[lamp_div] |= (LAMP_BLOCK_ONE << lamp_rem);
 }
 
+void
+solve(const size_t)
+
 static inline void
 read_input(void)
 {
 	FILE *input;
-	size_t C, lamp_rem;
+	size_t lamp_rem;
 	int lamp;
-	unsigned int skip_lamp;
+	unsigned int C, skip_lamp;
 	LampSet *restrict skip_set_ptr;
 
 	assert(input = fopen("lamps.in", "r"));
-	assert(fscanf(input, "%zu\n%zu\n", &N, &C) == 2);
+	assert(fscanf(input, "%zu\n%u\n", &N, &C) == 2);
 
 	lamp_length = N / LAMP_BLOCK_BIT;
 	lamp_rem    = N % LAMP_BLOCK_BIT;
@@ -209,16 +229,15 @@ read_input(void)
 		      UCHAR_MAX,
 		      lamp_size);
 
+
 	/* "odd" (if 1-based index) lamps */
 	(void) memset(&buttons[1][0],
-		        (1 <<  0) | (1 <<  2) | (1 <<  4) | (1 <<  6)
-		      | (1 <<  8) | (1 << 10) | (1 << 12) | (1 << 14),
+		      ODD_PATTERN,
 		      lamp_size);
 
 	/* "even" (if 1-based index) lamps */
 	(void) memset(&buttons[2][0],
-		        (1 <<  1) | (1 <<  3) | (1 <<  5) | (1 <<  7)
-		      | (1 <<  9) | (1 << 11) | (1 << 13) | (1 << 15),
+		      EVEN_PATTERN,
 		      lamp_size);
 
 	/* 3 X K + 1 (if 1-based index) lamps */
@@ -324,10 +343,40 @@ write_output(void)
 	assert(fclose(output) == 0);
 }
 
+void
+check_next_comb(unsigned int rem_switches,
+		unsigned int button_id)
+{
+	LampSet *restrict button_ptr;
+
+	if (rem_switches == 0) {
+		check_solution();
+		return;
+	}
+
+	--rem_switches;
+
+	while (button_id < COUNT_BUTTONS) {
+		button_ptr = &buttons[button_id];
+
+		check_next_comb()
+
+		toggle_button(*button_ptr);
+
+
+		toggle_button
+	}
+}
 
 static inline void
-solve()
+solve(void)
 {
+	/* turn on all lamps for candidate */
+	(void) memset(&candidate[0],
+		      UCHAR_MAX,
+		      lamp_size);
+
+	check_next_comb(max_switch_count, 0);
 }
 
 int
