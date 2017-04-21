@@ -8,6 +8,7 @@ TASK: lamps
 #include <assert.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <string.h>
 
 #define N_MAX			100
 #define COUNT_BUTTONS		4
@@ -16,8 +17,9 @@ TASK: lamps
 typedef unsigned long LampBlock;
 
 #define LAMP_BLOCK_MAX		ULONG_MAX
+#define LAMP_BLOCK_ONE		1UL
 #define LAMP_BLOCK_BIT		(sizeof(LampBlock) * CHAR_BIT)
-#define LAMP_BLOCK_MAX_BIT	(1UL << (LAMP_BLOCK_BIT - 1))
+#define LAMP_BLOCK_MAX_BIT	(LAMP_BLOCK_ONE << (LAMP_BLOCK_BIT - 1))
 #define LAMP_LENGTH(N)							\
 (((N) / LAMP_BLOCK_BIT) + (((N) % LAMP_BLOCK_BIT) > 0))
 
@@ -25,12 +27,9 @@ typedef LampBlock LampSet[LAMP_LENGTH(N_MAX)];
 
 static LampSet buttons[COUNT_BUTTONS];
 
-static unsigned int final_on[N_MAX];
-static unsigned int final_off[N_MAX];
-static size_t length_final_on;
-static size_t length_final_off;
-
-static LampSet solution_buffer[COUNT_SOLUTIONS_MAX];
+static LampSet final_on;
+static LampSet final_off;
+static LampSet solutions_buffer[COUNT_SOLUTIONS_MAX];
 static LampSet *solutions[COUNT_SOLUTIONS_MAX];
 static size_t count_solutions;
 
@@ -38,22 +37,62 @@ static size_t N;
 static size_t lamp_length;
 static size_t lamp_size;
 static size_t max_switch_count;
-static LampBlock max_rem_bit;
+static LampBlock last_max_bit;
 
 static inline int
-compare_lamp_sets(const LampSet lamp_set1,
-		  const LampSet lamp_set2)
+compare_lamp_bytes(const int byte1,
+		   const int byte2)
+{
+	int bit1, bit2, bit;
+
+	bit = 1;
+
+	while (1) {
+		bit1 = byte1 & bit;
+		bit2 = byte2 & bit;
+
+		if (bit1 ^ bit2)
+			return bit1 ? 1 : -1;
+
+		bit <<= 1;
+	}
+}
+
+static inline int
+compare_lamp_blocks(const LampBlock block1,
+		    const LampBlock block2)
+{
+	int byte1, byte2;
+	unsigned int shift;
+
+	shift = 0;
+	while (1) {
+		byte1 = (unsigned char) (block1 >> shift);
+		byte2 = (unsigned char) (block2 >> shift);
+
+		if (byte1 != byte2)
+			return compare_lamp_bytes(byte1,
+						  byte2);
+
+		shift += CHAR_BIT;
+	}
+}
+
+static inline int
+compare_lamp_sets(const LampSet set1,
+		  const LampSet set2)
 {
 	LampBlock block1, block2;
 	size_t i;
 
 	i = 0;
 	do {
-		block1 = lamp_set1[i];
-		block2 = lamp_set2[i];
+		block1 = set1[i];
+		block2 = set2[i];
 
 		if (block1 != block2)
-			return (block1 > block2) ? -1 : 1; /* reverse compare */
+			return compare_lamp_blocks(block1,
+						   block2);
 	} while (++i < lamp_length);
 
 	return 0;
@@ -63,28 +102,84 @@ int
 order_lamp_sets_asc(const void *key1,
 		    const void *key2)
 {
-	const LampSet *restrict *lamp_set1 = (const LampSet *restrict *) key1;
-	const LampSet *restrict *lamp_set2 = (const LampSet *restrict *) key2;
+	const LampSet *restrict *set1 = (const LampSet *restrict *) key1;
+	const LampSet *restrict *set2 = (const LampSet *restrict *) key2;
 
-	return compare_lamp_sets(**lamp_set1,
-				 **lamp_set2);
+	return compare_lamp_sets(**set1,
+				 **set2);
+}
+
+static inline void
+check_solution(const LampSet candidate)
+{
+	size_t i;
+	LampBlock cand_block, on_block, off_block;
+	LampSet *restrict sol_ptr;
+
+	i = 0;
+	do {
+		cand_block = candidate[i];
+		on_block   = final_on[i];
+
+		if ((cand_block & on_block) != on_block)
+			return; /* not enough required lamps on */
+
+		off_block  = final_off[i];
+
+		if ((cand_block & off_block))
+			return; /* some lamps on that should be off */
+
+	} while (++i < lamp_length);
+
+	/* pass, append to solutions */
+
+	sol_ptr			     = &solutions_buffer[count_solutions];
+	solutions[count_solutions++] = sol_ptr;
+
+	(void) memcpy(*sol_ptr,
+		      candidate,
+		      lamp_size);
+
+}
+
+static inline void
+put_lamp(LampSet set,
+	 const unsigned int lamp)
+{
+	size_t lamp_div, lamp_rem;
+
+	lamp_div = lamp / LAMP_BLOCK_BIT;
+	lamp_rem = lamp % LAMP_BLOCK_BIT;
+
+	set[lamp_div] |= (LAMP_BLOCK_ONE << lamp_rem);
 }
 
 static inline void
 read_input(void)
 {
 	FILE *input;
-	size_t C, lamp_rem, rem_gt_zero;
+	size_t C, lamp_rem;
 	int lamp;
+	unsigned int skip_lamp;
+	LampSet *restrict skip_set_ptr;
 
 	assert(input = fopen("lamps.in", "r"));
 	assert(fscanf(input, "%zu\n%zu\n", &N, &C) == 2);
 
-	lamp_rem         = N % LAMP_BLOCK_BIT;
-	rem_gt_zero      = (lamp_rem > 0);
-	max_rem_bit      = rem_gt_zero << lamp_rem;
-	lamp_length      = (N / LAMP_BLOCK_BIT) + rem_gt_zero;
-	lamp_size	 = sizeof(LampBlock) * lamp_length;
+	lamp_length = N / LAMP_BLOCK_BIT;
+	lamp_rem    = N % LAMP_BLOCK_BIT;
+	lamp_size   = (sizeof(LampBlock) * lamp_length);
+
+	if (lamp_rem == 0) {
+		last_max_bit   = LAMP_BLOCK_MAX_BIT;
+
+	} else {
+		++lamp_length;
+		lamp_size    += (  (lamp_rem / CHAR_BIT)
+				 + ((lamp_rem % CHAR_BIT) > 0));
+		last_max_bit  = LAMP_BLOCK_ONE << (lamp_rem - 1);
+	}
+
 	max_switch_count = (C < COUNT_BUTTONS) ? C : COUNT_BUTTONS;
 
 	while (1) {
@@ -93,7 +188,7 @@ read_input(void)
 		if (lamp < 0)
 			break;
 
-		final_on[length_final_on++] = (unsigned int) (lamp - 1);
+		put_lamp(final_on, lamp - 1);
 	}
 
 	while (1) {
@@ -102,10 +197,38 @@ read_input(void)
 		if (lamp < 0)
 			break;
 
-		final_off[length_final_off++] = (unsigned int) (lamp - 1);
+		put_lamp(final_off, lamp - 1);
 	}
 
 	assert(fclose(input) == 0);
+
+	/* set buttons */
+
+	/* all lamps */
+	(void) memset(&buttons[0][0],
+		      UCHAR_MAX,
+		      lamp_size);
+
+	/* "odd" (if 1-based index) lamps */
+	(void) memset(&buttons[1][0],
+		        (1 <<  0) | (1 <<  2) | (1 <<  4) | (1 <<  6)
+		      | (1 <<  8) | (1 << 10) | (1 << 12) | (1 << 14),
+		      lamp_size);
+
+	/* "even" (if 1-based index) lamps */
+	(void) memset(&buttons[2][0],
+		        (1 <<  1) | (1 <<  3) | (1 <<  5) | (1 <<  7)
+		      | (1 <<  9) | (1 << 11) | (1 << 13) | (1 << 15),
+		      lamp_size);
+
+	/* 3 X K + 1 (if 1-based index) lamps */
+	skip_set_ptr = &buttons[3];
+	skip_lamp    = 0;
+	do {
+		put_lamp(*skip_set_ptr,
+			 skip_lamp);
+		skip_lamp += 3;
+	} while (skip_lamp < N);
 }
 
 static inline void
@@ -117,61 +240,73 @@ write_lamp_block(FILE *output,
 	LampBlock bit;
 
 	bit = 1;
+	while (1) {
+		token = '0' + ((block & bit) != 0);
+
+		assert(fputc(token, output) != EOF);
+
+		if (bit == bit_max)
+			return;
+
+		bit <<= 1;
+	}
 }
 
 static inline void
 write_lamp_set(FILE *output,
-	       const LampSet lamp_set)
+	       const LampSet set)
 {
 	LampBlock block;
-	LampBlock bit;
 	size_t i;
 
 	i   = 0;
-	bit = 1 << 1;
 	while (1) {
-		block = lamp_set[i];
+		block = set[i];
 
 		if (++i == lamp_length)
 			break;
 
-		while (1) {
-
-			assert(fputc(token, output) != EOF);
-
-		       if (bit == LAMP_BLOCK_MAX_BIT)
-			       break;
-
-		       bit <<= 1;
-		}
-
-		bit = 1;
+		write_lamp_block(output,
+				 block,
+				 LAMP_BLOCK_MAX_BIT);
 	}
+
+	write_lamp_block(output,
+			 block,
+			 last_max_bit);
+
+	assert(fputc('\n', output) != EOF);
 }
 
 static inline void
 write_solutions(FILE *output)
 {
+	LampSet *restrict unique;
+	LampSet *restrict next;
+
+	if (count_solutions == 0) {
+		assert(fputs("IMPOSSIBLE\n", output) != EOF);
+		return;
+	}
+
 	qsort(&solutions[0],
 	      count_solutions,
 	      sizeof(solutions[0]),
 	      &order_lamp_sets_asc);
 
-	LampSet unique, next;
-
-	unique = *solutions[--count_solutions];
+	unique = solutions[--count_solutions];
 
 	while (1) {
 		write_lamp_set(output,
-			       unique);
+			       *unique);
 
 		do {
 			if (count_solutions == 0)
 				return;
 
-			next = *solutions[--count_solutions];
-		} while (!compare_lamp_sets(unique,
-					    next));
+			next = solutions[--count_solutions];
+		} while (!compare_lamp_sets(*unique,
+					    *next));
 
 		unique = next;
 	}
@@ -184,17 +319,25 @@ write_output(void)
 
 	assert(output = fopen("lamps.out", "w"));
 
-	if (count_solutions == 0)
-		assert(fputs("IMPOSSIBLE\n", output) != EOF);
-	else
-		write_solutions(output);
+	write_solutions(output);
 
 	assert(fclose(output) == 0);
+}
+
+
+static inline void
+solve()
+{
 }
 
 int
 main(void)
 {
+	read_input();
+
+	solve();
+
+	write_output();
 
 	return 0;
 }
