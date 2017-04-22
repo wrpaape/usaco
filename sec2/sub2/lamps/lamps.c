@@ -171,9 +171,6 @@ put_lamp(LampSet set,
 	set[lamp_div] |= (LAMP_BLOCK_ONE << lamp_rem);
 }
 
-void
-solve(const size_t)
-
 static inline void
 read_input(void)
 {
@@ -302,6 +299,7 @@ write_solutions(FILE *output)
 {
 	LampSet *restrict unique;
 	LampSet *restrict next;
+	size_t i;
 
 	if (count_solutions == 0) {
 		assert(fputs("IMPOSSIBLE\n", output) != EOF);
@@ -313,17 +311,17 @@ write_solutions(FILE *output)
 	      sizeof(solutions[0]),
 	      &order_lamp_sets_asc);
 
-	unique = solutions[--count_solutions];
-
+	unique = solutions[0];
+	i      = 0;
 	while (1) {
 		write_lamp_set(output,
 			       *unique);
 
 		do {
-			if (count_solutions == 0)
+			if (++i == count_solutions)
 				return;
 
-			next = solutions[--count_solutions];
+			next = solutions[i];
 		} while (!compare_lamp_sets(*unique,
 					    *next));
 
@@ -349,22 +347,22 @@ check_next_comb(unsigned int rem_switches,
 {
 	LampSet *restrict button_ptr;
 
-	if (rem_switches == 0) {
-		check_solution();
+	check_solution();
+
+	if (rem_switches == 0)
 		return;
-	}
 
 	--rem_switches;
 
 	while (button_id < COUNT_BUTTONS) {
-		button_ptr = &buttons[button_id];
-
-		check_next_comb()
+		button_ptr = &buttons[button_id++];
 
 		toggle_button(*button_ptr);
 
+		check_next_comb(rem_switches,
+				button_id);
 
-		toggle_button
+		toggle_button(*button_ptr);
 	}
 }
 
