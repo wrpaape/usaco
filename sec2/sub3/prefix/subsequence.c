@@ -39,11 +39,10 @@ struct PrimNode {
 
 static struct PrimNode node_buffer[PRIM_NODE_COUNT_MAX];
 static struct PrimNode *restrict primitives[PRIM_SPAN];
-static size_t max_prim_length;
 
-/* PRIM_LENGTH_MAX -> next power of 2 */
-static size_t acc_lengths[16];
-static size_t mask      = 15;
+static size_t max_prim_length;
+static size_t max_prefix_length;
+
 
 
 
@@ -118,6 +117,9 @@ patch_step(const unsigned char *const restrict sequence,
 	   const size_t i_seq,
 	   const size_t prim_length_limit)
 {
+	/* PRIM_LENGTH_MAX -> next power of 2 */
+	static size_t acc_lengths[16];
+	static size_t mask      = 15;
 	size_t max_length_here;
 	size_t length_here;
 	size_t max_length_there;
@@ -158,6 +160,9 @@ patch_step(const unsigned char *const restrict sequence,
 
 	/* set max sequence length from 'i_seq' */
 	acc_lengths[i_seq & mask] = max_length_here;
+
+	if (max_length_here > max_prefix_length)
+		max_prefix_length = max_length_here;
 }
 
 
@@ -219,7 +224,7 @@ main(void)
 	solve(sequence, length_sequence);
 
 	assert(output = fopen("prefix.out", "w"));
-	assert(fprintf(output, "%zu\n", acc_lengths[0]) > 0);
+	assert(fprintf(output, "%zu\n", max_prefix_length) > 0);
 	assert(fclose(output) == 0);
 
 	return 0;
