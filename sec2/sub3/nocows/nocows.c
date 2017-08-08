@@ -26,33 +26,34 @@ do_solve(unsigned int rem_height,
 		return 1; // successfully placed all cows
 
 	if (rem_height == 0)
-		return 0; // out of height, cows remain
+		return 0; // out of height, cows remain (no solution)
 
 	--rem_height; // reduce remaining tree height
 	--rem_cows;   // place 1 root cow
 
-	unsigned int odd_peds;
-
+	unsigned int peds_left;
+	unsigned int peds_right;
 	unsigned int total_peds     = 0;
 	unsigned int rem_cows_left  = 0;
 	unsigned int rem_cows_right = rem_cows;
 
 
 	while (1) {
-		odd_peds = solve(rem_height,
-				 rem_cows_left);
+		peds_left = solve(rem_height,
+				  rem_cows_left);
 
 		if (rem_cows_left == rem_cows_right)
-			return (total_peds * 2) + odd_peds;
+			return total_peds + peds_left;
 
 		++rem_cows_left;
 
-		total_peds += odd_peds;
-		total_peds += solve(rem_height,
-				    rem_cows_right);
+		peds_right = solve(rem_height,
+				   rem_cows_right);
+
+		total_peds += (peds_left < peds_right) ? peds_left : peds_right;
 
 		if (rem_cows_left == rem_cows_right)
-			return total_peds * 2;
+			return total_peds;
 
 		--rem_cows_right;
 	}
@@ -64,7 +65,7 @@ solve(unsigned int rem_height,
 {
 
 	unsigned int *const cache_ptr = &lookup[rem_height][rem_cows];
-	unsigned int cached    	      = *cache_ptr;
+	unsigned int cached           = *cache_ptr;
 
 	if (cached == 0) {
 		cached = do_solve(rem_height,
