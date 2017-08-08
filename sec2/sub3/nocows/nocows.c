@@ -11,16 +11,16 @@ TASK: nocows
 #define K_MAX 100
 
 
-static unsigned int lookup[K_MAX + 1][N_MAX + 1];
+static unsigned long long lookup[K_MAX + 1][N_MAX + 1];
 
-static unsigned int
-solve(const unsigned int rem_height,
-      const unsigned int rem_cows);
+static unsigned long long
+solve(const unsigned long long rem_height,
+      const unsigned long long rem_cows);
 
 
-static inline unsigned int
-do_solve(unsigned int rem_height,
-	 unsigned int rem_cows)
+static inline unsigned long long
+do_solve(unsigned long long rem_height,
+	 unsigned long long rem_cows)
 {
 	if (rem_cows == 0)
 		return 1; // successfully placed all cows
@@ -31,11 +31,11 @@ do_solve(unsigned int rem_height,
 	--rem_height; // reduce remaining tree height
 	--rem_cows;   // place 1 root cow
 
-	unsigned int peds_left;
-	unsigned int peds_right;
-	unsigned int total_peds     = 0;
-	unsigned int rem_cows_left  = 0;
-	unsigned int rem_cows_right = rem_cows;
+	unsigned long long peds_left;
+	unsigned long long peds_right;
+	unsigned long long total_peds     = 0;
+	unsigned long long rem_cows_left  = 0;
+	unsigned long long rem_cows_right = rem_cows;
 
 
 	while (1) {
@@ -43,14 +43,14 @@ do_solve(unsigned int rem_height,
 				  rem_cows_left);
 
 		if (rem_cows_left == rem_cows_right)
-			return total_peds + peds_left;
+			return total_peds + (peds_left * peds_left);
 
 		++rem_cows_left;
 
 		peds_right = solve(rem_height,
 				   rem_cows_right);
 
-		total_peds += (peds_left < peds_right) ? peds_left : peds_right;
+		total_peds += (peds_left * peds_right * 2);
 
 		if (rem_cows_left == rem_cows_right)
 			return total_peds;
@@ -59,13 +59,13 @@ do_solve(unsigned int rem_height,
 	}
 }
 
-static unsigned int
-solve(unsigned int rem_height,
-      unsigned int rem_cows)
+static unsigned long long
+solve(unsigned long long rem_height,
+      unsigned long long rem_cows)
 {
 
-	unsigned int *const cache_ptr = &lookup[rem_height][rem_cows];
-	unsigned int cached           = *cache_ptr;
+	unsigned long long *const cache_ptr = &lookup[rem_height][rem_cows];
+	unsigned long long cached           = *cache_ptr;
 
 	if (cached == 0) {
 		cached = do_solve(rem_height,
@@ -81,18 +81,21 @@ int
 main(void)
 {
 	FILE *input, *output;
-	unsigned int N, K;
+	unsigned long long N, K;
 
 	assert(input = fopen("nocows.in", "r"));
-	assert(fscanf(input, "%u %u\n", &N, &K) == 2);
+	assert(fscanf(input, "%llu %llu\n", &N, &K) == 2);
 	assert(fclose(input) == 0);
 
-	const unsigned int total_peds = solve(K, N);
+	const unsigned long long total_peds = solve(K, N);
 
 	assert(total_peds >= 0);
 
+	printf("total_peds: %llu\n", total_peds);
+	printf("total_peds %% 9901: %llu\n", total_peds % 9901);
+
 	assert(output = fopen("nocows.out", "w"));
-	assert(fprintf(output, "%u\n", total_peds % 9901) > 0);
+	assert(fprintf(output, "%llu\n", total_peds % 9901) > 0);
 	assert(fclose(output) == 0);
 
 	return 0;
