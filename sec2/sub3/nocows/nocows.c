@@ -39,7 +39,6 @@ do_solve(unsigned int rem_height,
 	unsigned int rem_cows_left  = 1;
 	unsigned int rem_cows_right = rem_cows - 1;
 
-
 	while (1) {
 		peds_left = solve(rem_height,
 				  rem_cows_left);
