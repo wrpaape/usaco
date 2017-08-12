@@ -14,6 +14,12 @@ TASK: nocows
 #define K_MAX 99
 
 
+struct SolveNode
+{
+	unsigned int count_short;
+	unsigned int count_complete;
+};
+
 static int lookup[K_MAX + 1][N_MAX + 1];
 
 static unsigned int
