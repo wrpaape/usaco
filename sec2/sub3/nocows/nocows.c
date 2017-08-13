@@ -14,22 +14,23 @@ TASK: nocows
 #define K_MAX 99
 
 
-struct SolveNode
+struct Solution
 {
-	unsigned int count_short;
-	unsigned int count_complete;
+	short complete;
+	short incomplete;
 };
 
-static int lookup[K_MAX + 1][N_MAX + 1];
+static Solution lookup[K_MAX + 1][N_MAX + 1];
 
-static unsigned int
+static struct Solution *
 solve(const unsigned int rem_height,
       const unsigned int rem_cows);
 
 
-static inline unsigned int
+static inline void
 do_solve(unsigned int rem_height,
-	 unsigned int rem_cows)
+	 unsigned int rem_cows,
+	 struct Solution *const solution)
 {
 	--rem_cows; // place 1 root cow
 	if (rem_cows <= 1)
@@ -70,21 +71,20 @@ do_solve(unsigned int rem_height,
 	}
 }
 
-static unsigned int
+static const struct Solution *
 solve(unsigned int rem_height,
       unsigned int rem_cows)
 {
 
-	int *const cache_ptr = &lookup[rem_height][rem_cows];
-	int cached           = *cache_ptr;
+	struct Solution *const solution = &lookup[rem_height][rem_cows];
 
-	if (cached < 0) {
-		cached = (int) do_solve(rem_height,
-					rem_cows);
-		*cache_ptr = cached;
+	if (solution->complete < 0) {
+		do_solve(rem_height,
+			 rem_cows,
+			 solution);
 	}
 
-	return (unsigned int) cached;
+	return solution;
 }
 
 
@@ -106,12 +106,10 @@ main(void)
 			      -1, // safe, 2s compliment all 1's
 			      size_of_n_range);
 
-	const unsigned int total_peds_mod_9901 = solve(K, N);
-
-	printf("total_peds_mod_9901: %u\n", total_peds_mod_9901);
+	const struct Solution *const solution = solve(K, N);
 
 	assert(output = fopen("nocows.out", "w"));
-	assert(fprintf(output, "%u\n", total_peds_mod_9901) > 0);
+	assert(fprintf(output, "%hd\n", solution->complete) > 0);
 	assert(fclose(output) == 0);
 
 	return 0;
