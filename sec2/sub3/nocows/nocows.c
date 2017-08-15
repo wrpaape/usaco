@@ -58,6 +58,7 @@ do_solve(unsigned int rem_height,
 	unsigned int incomplete_left;
 	unsigned int complete_right;
 	unsigned int incomplete_right;
+	unsigned int count_combined;
 
 	unsigned int total_complete   = 0;
 	unsigned int total_incomplete = 0;
@@ -65,38 +66,45 @@ do_solve(unsigned int rem_height,
 	unsigned int rem_cows_right   = rem_cows - 1;
 
 	while (1) {
-		peds_left 	= solve(rem_height,
-				       	rem_cows_left);
+		peds_left	= solve(rem_height,
+					rem_cows_left);
 		complete_left   = peds_left->complete;
 		incomplete_left = peds_left->incomplete;
 
 		if (rem_cows_left == rem_cows_right) {
-			total_complete += ((complete_left * complete_left) % 9901);
+			count_combined  = complete_left * complete_left;
+			total_complete += (count_combined % 9901);
 			total_complete %= 9901;
 
-			total_complete += ((incomplete_left * complete_left) % 9901);
+			count_combined  = incomplete_left * complete_left;
+			total_complete += (count_combined % 9901);
 			total_complete %= 9901;
 
-			total_incomplete += ((incomplete_left * incomplete_left) % 9901);
+			count_combined    = incomplete_left * incomplete_left;
+			total_incomplete += (count_combined % 9901);
 			total_incomplete %= 9901;
 			break;
 		}
 
-		peds_right 	 = solve(rem_height,
+		peds_right	 = solve(rem_height,
 					 rem_cows_right);
 		complete_right   = peds_right->complete;
 		incomplete_right = peds_right->incomplete;
 
-		total_complete += ((complete_left * complete_right * 2) % 9901);
+		count_combined  = complete_left * complete_right * 2;
+		total_complete += (count_combined % 9901);
 		total_complete %= 9901;
 
-		total_complete += ((incomplete_left * complete_right * 2) % 9901);
+		count_combined  = incomplete_left * complete_right * 2;
+		total_complete += (count_combined % 9901);
 		total_complete %= 9901;
 
-		total_complete += ((complete_left * incomplete_right * 2) % 9901);
+		count_combined  = complete_left * incomplete_right * 2;
+		total_complete += (count_combined % 9901);
 		total_complete %= 9901;
 
-		total_incomplete += ((incomplete_left * incomplete_right * 2) % 9901);
+		count_combined    = incomplete_left * incomplete_right * 2;
+		total_incomplete += (count_combined % 9901);
 		total_incomplete %= 9901;
 
 		++rem_cows_left;

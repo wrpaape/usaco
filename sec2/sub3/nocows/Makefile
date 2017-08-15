@@ -1,4 +1,4 @@
-CC   = gcc -Wall -O2 -std=c11
+CC   = gcc -Wall -O2 -std=c11 -g
 PROG = nocows
 
 all: $(PROG)
