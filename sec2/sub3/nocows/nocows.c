@@ -56,8 +56,10 @@ do_solve(unsigned int rem_height,
 	const struct Solution *peds_right;
 	unsigned int complete_left;
 	unsigned int incomplete_left;
+	unsigned int total_left;
 	unsigned int complete_right;
 	unsigned int incomplete_right;
+	unsigned int total_right;
 	unsigned int count_combined;
 
 	unsigned int total_complete   = 0;
@@ -70,13 +72,10 @@ do_solve(unsigned int rem_height,
 					rem_cows_left);
 		complete_left   = peds_left->complete;
 		incomplete_left = peds_left->incomplete;
+		total_left      = (complete_left + incomplete_left) % 9901;
 
 		if (rem_cows_left == rem_cows_right) {
-			count_combined  = complete_left * complete_left;
-			total_complete += (count_combined % 9901);
-			total_complete %= 9901;
-
-			count_combined  = incomplete_left * complete_left;
+			count_combined  = complete_left * total_left;
 			total_complete += (count_combined % 9901);
 			total_complete %= 9901;
 
@@ -90,16 +89,13 @@ do_solve(unsigned int rem_height,
 					 rem_cows_right);
 		complete_right   = peds_right->complete;
 		incomplete_right = peds_right->incomplete;
+		total_right      = complete_right + incomplete_right;
 
-		count_combined  = complete_left * complete_right * 2;
+		count_combined  = complete_right * total_left * 2;
 		total_complete += (count_combined % 9901);
 		total_complete %= 9901;
 
-		count_combined  = incomplete_left * complete_right * 2;
-		total_complete += (count_combined % 9901);
-		total_complete %= 9901;
-
-		count_combined  = complete_left * incomplete_right * 2;
+		count_combined  = complete_left * total_right * 2;
 		total_complete += (count_combined % 9901);
 		total_complete %= 9901;
 
