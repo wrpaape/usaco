@@ -23,4 +23,4 @@ for file in $path_to_task/templatetask*
 do
     mv $file ${file//templatetask/$task}
 done
-sed --in-place --expression="s/templatetask/$task/g" $path_to_task/*
+sed --in-place --expression="s/templatetask/$task/g" $path_to_task/{.,}*
