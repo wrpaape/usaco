@@ -129,27 +129,13 @@ read_input(struct Problem *problem)
 
 static unsigned long
 find_lowest_humble(unsigned long humbles[N_MAX + 1],
-                   unsigned long begin,
-                   unsigned long end,
+                   unsigned long cursor,
                    unsigned long humble_floor)
 {
-    while (1) {
-        unsigned long mid    = begin + ((end - begin) / 2);
-        unsigned long humble = humbles[mid];
+    while (humbles[cursor] < humble_floor)
+        ++cursor;
 
-        if (humble < humble_floor) {
-            begin = mid + 1;
-            if (begin == end)
-                break;
-        } else if (humble > humble_floor) {
-            end = mid;
-            if (begin == end)
-                break;
-        } else {
-            return mid;
-        }
-    }
-    return begin;
+    return cursor;
 }
 
 static unsigned long
@@ -169,7 +155,6 @@ get_next_humble(const struct Problem *problem,
         unsigned long humble_floor = div + (rem > 0);
         unsigned long i_humble     = find_lowest_humble(humbles,
                                                         lower_bounds[i],
-                                                        num_humbles,
                                                         humble_floor);
         lower_bounds[i] = i_humble;
 
